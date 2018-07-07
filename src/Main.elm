@@ -4,11 +4,13 @@ import Html exposing (..)
 import Navigation exposing (Location)
 import Json.Decode as Decode exposing (Value)
 import Route exposing (Route)
+import Page.Home as Home
 
 
 type Page
     = Blank
     | NotFound
+    | Home Home.Model
 
 
 type PageState
@@ -39,6 +41,7 @@ init val location =
 type Msg
     = NoOp
     | SetRoute (Maybe Route)
+    | HomeMsg Home.Msg
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -52,7 +55,7 @@ setRoute maybeRoute model =
                 { model | pageState = Loaded NotFound } ! []
 
             Just Route.Home ->
-                transition Blank ! []
+                transition (Home Home.initialModel) ! []
 
             Just Route.Root ->
                 model ! [ Route.modifyUrl Route.Home ]
@@ -60,12 +63,45 @@ setRoute maybeRoute model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        NoOp ->
-            model ! []
+    updatePage (getPage model.pageState) msg model
 
-        SetRoute route ->
-            setRoute route model
+
+updatePage : Page -> Msg -> Model -> ( Model, Cmd Msg )
+updatePage page msg model =
+    let
+        toPage toModel toMsg subUpdate subMsg subModel =
+            let
+                ( newModel, newCmd ) =
+                    subUpdate subMsg subModel
+            in
+                ( { model | pageState = Loaded (toModel newModel) }, Cmd.map toMsg newCmd )
+    in
+        case ( msg, page ) of
+            ( NoOp, _ ) ->
+                model ! []
+
+            ( SetRoute route, _ ) ->
+                setRoute route model
+
+            ( HomeMsg subMsg, Home subModel ) ->
+                toPage Home HomeMsg Home.update subMsg subModel
+
+            ( _, NotFound ) ->
+                -- Disregard incoming messages when we're on the
+                -- NotFound page.
+                model ! []
+
+            ( _, _ ) ->
+                -- Disregard incoming messages when we're on the
+                -- NotFound page.
+                model ! []
+
+
+getPage : PageState -> Page
+getPage pageState =
+    case pageState of
+        Loaded page ->
+            page
 
 
 
@@ -79,7 +115,7 @@ view model =
             viewPage page
 
 
-viewPage : Page -> Html msg
+viewPage : Page -> Html Msg
 viewPage page =
     case page of
         NotFound ->
@@ -87,6 +123,9 @@ viewPage page =
 
         Blank ->
             text ""
+
+        Home subModel ->
+            Home.view subModel |> Html.map HomeMsg
 
 
 
