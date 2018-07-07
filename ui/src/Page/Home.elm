@@ -5,7 +5,7 @@ import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onClick, onSubmit, onInput)
 import Data.User exposing (User)
 import Request.Helpers exposing (httpErrorToString)
-import Request.User
+import Request.User exposing (storeSession)
 import Http
 import Route
 
@@ -61,7 +61,7 @@ update msg model =
             { model | errors = [ ( Form, httpErrorToString error ) ] } ! []
 
         LoginCompleted (Ok user) ->
-            model ! [ Route.modifyUrl Route.Home ]
+            model ! [ storeSession user, Route.modifyUrl Route.Home ]
 
 
 view : Model -> Html Msg

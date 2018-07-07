@@ -1,10 +1,18 @@
-module Request.User exposing (login)
+module Request.User exposing (login, storeSession)
 
-import Data.AuthToken exposing (AuthToken, header)
 import Json.Decode as Decode
 import Data.User as User exposing (User)
 import Http
 import Json.Encode as Encode
+import Ports
+
+
+storeSession : User -> Cmd msg
+storeSession user =
+    User.encode user
+        |> Encode.encode 0
+        |> Just
+        |> Ports.storeSession
 
 
 login : { r | email : String, password : String } -> Http.Request User
