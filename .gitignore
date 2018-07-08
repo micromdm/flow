@@ -3,7 +3,6 @@
 # Elm
 ui/assets/generated/
 ui/elm-stuff/
-ui/index.html
 elm.js
 
 # Go
