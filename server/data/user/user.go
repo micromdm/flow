@@ -6,10 +6,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/micromdm/flow/server/id"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/micromdm/flow/server/id"
 )
+
+type APIUser struct {
+	ID        string `json:"id"`
+	Username  string `json:"username"`
+	FullName  string `json:"full_name"`
+	Email     string `json:"email"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+	Token     string `json:"token"`
+}
 
 type User struct {
 	ID        string
@@ -19,6 +30,7 @@ type User struct {
 	Password  []byte
 	Salt      string
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (u *User) ValidatePassword(password string) error {
@@ -64,6 +76,7 @@ func newUser(username, fullname, email, password string) (*User, error) {
 		FullName:  fullname,
 		Email:     email,
 		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}
 
 	err := user.SetPassword(password, passwordKeySize, bcryptCost)

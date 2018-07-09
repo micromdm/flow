@@ -9,11 +9,13 @@ import Data.AuthToken as AuthToken exposing (AuthToken)
 
 
 type alias User =
-    { email : String
-    , token : AuthToken
+    { id : String
     , username : Username
-    , createdAt : String
-    , updatedAt : String
+    , fullName : String
+    , email : String
+    , createdAt : Int
+    , updatedAt : Int
+    , token : AuthToken
     }
 
 
@@ -24,21 +26,25 @@ type alias User =
 decoder : Decoder User
 decoder =
     decode User
-        |> required "email" Decode.string
-        |> required "token" AuthToken.decoder
+        |> required "id" Decode.string
         |> required "username" usernameDecoder
-        |> required "createdAt" Decode.string
-        |> required "updatedAt" Decode.string
+        |> required "full_name" Decode.string
+        |> required "email" Decode.string
+        |> required "created_at" Decode.int
+        |> required "updated_at" Decode.int
+        |> required "token" AuthToken.decoder
 
 
 encode : User -> Value
 encode user =
     Encode.object
-        [ ( "email", Encode.string user.email )
-        , ( "token", AuthToken.encode user.token )
+        [ ( "id", Encode.string user.id )
         , ( "username", encodeUsername user.username )
-        , ( "createdAt", Encode.string user.createdAt )
-        , ( "updatedAt", Encode.string user.updatedAt )
+        , ( "full_name", Encode.string user.fullName )
+        , ( "email", Encode.string user.email )
+        , ( "created_at", Encode.int user.createdAt )
+        , ( "updated_at", Encode.int user.updatedAt )
+        , ( "token", AuthToken.encode user.token )
         ]
 
 
