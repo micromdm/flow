@@ -38,14 +38,14 @@ func (u *User) ValidatePassword(password string) error {
 	return bcrypt.CompareHashAndPassword(u.Password, saltAndPass)
 }
 
-func (u *User) SetPassword(plaintext string, keySize, cost int) error {
-	salt, err := generateRandomText(keySize)
+func (u *User) SetPassword(plaintext string) error {
+	salt, err := generateRandomText(passwordKeySize)
 	if err != nil {
 		return err
 	}
 
 	withSalt := []byte(fmt.Sprintf("%s%s", plaintext, salt))
-	hashed, err := bcrypt.GenerateFromPassword(withSalt, cost)
+	hashed, err := bcrypt.GenerateFromPassword(withSalt, bcryptCost)
 	if err != nil {
 		return err
 	}
@@ -79,6 +79,6 @@ func newUser(username, fullname, email, password string) (*User, error) {
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	err := user.SetPassword(password, passwordKeySize, bcryptCost)
+	err := user.SetPassword(password)
 	return user, errors.Wrapf(err, "set password for new user %s", username)
 }

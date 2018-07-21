@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  db:
+    image: postgres:11
+    environment:
+      POSTGRES_DB: flow
+      POSTGRES_USER: flow
+      POSTGRES_PASSWORD: work
+    ports:
+      - 5432:5432

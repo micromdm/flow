@@ -28,5 +28,18 @@ generate-dev: generate
 server:
 	go build -o build/flow ./cmd/flow
 
-serve-dev: ui generate-dev server
+docker-up-dev:
+	docker-compose -f docker-compose-dev.yaml up -d  
+
+GOOSE :=cd server/data/migrations && goose postgres "host=localhost port=5432 user=flow dbname=flow password=work sslmode=disable"
+migrate-up-dev:
+	$(GOOSE) up
+
+migrate-down-dev:
+	$(GOOSE) down
+
+psql-dev:
+	docker exec -it flow_db_1 psql -U flow
+
+serve-dev: ui generate-dev server docker-up-dev migrate-up-dev
 	./build/flow

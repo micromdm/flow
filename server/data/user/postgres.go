@@ -39,7 +39,7 @@ func (d *Postgres) CreateUser(ctx context.Context, username, fullname, email, pa
 			user.Username,
 			user.FullName,
 			user.Email,
-			user.Password,
+			string(user.Password),
 			user.Salt,
 			user.CreatedAt,
 			user.UpdatedAt,
