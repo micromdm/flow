@@ -20,7 +20,6 @@ func TestCreateUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(user.ValidatePassword("abcd123"))
-
 }
 
 func setup(t *testing.T) (*Postgres, func()) {

@@ -1,4 +1,4 @@
-package sessionsvc
+package session
 
 import (
 	"context"

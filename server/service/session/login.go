@@ -1,4 +1,4 @@
-package sessionsvc
+package session
 
 import (
 	"context"
@@ -16,7 +16,11 @@ import (
 func (svc *SessionService) Login(ctx context.Context, email, password string) (*user.APIUser, error) {
 	usr, err := svc.userdb.FindUser(ctx, "", email)
 	if err != nil {
-		return nil, errors.Wrap(err, "logging in user")
+		return nil, authenticationError{reason: errors.Wrapf(err, "find user %s for login", email).Error()}
+	}
+
+	if err := usr.ValidatePassword(password); err != nil {
+		return nil, authenticationError{reason: errors.Wrapf(err, "wrong password for user %s", email).Error()}
 	}
 
 	signed, err := token.NewSignedToken(svc.privateKey, usr.ID)
@@ -49,7 +53,7 @@ type loginRequest struct {
 
 type loginResponse struct {
 	User *user.APIUser `json:"user"`
-	Err  error
+	Err  error         `json:"-"`
 }
 
 func (r loginResponse) Failed() error { return r.Err }
@@ -80,4 +84,28 @@ func (mw loggingMiddleware) Login(ctx context.Context, email, password string) (
 
 	usr, err = mw.next.Login(ctx, email, password)
 	return
+}
+
+type authenticationError struct {
+	reason string
+
+	// client reason is used to provide
+	// a different error message to the client
+	// when security is a concern
+	clientReason string
+}
+
+func (e authenticationError) Error() string {
+	return e.reason
+}
+
+func (e authenticationError) AuthenticationError() string {
+	if e.clientReason != "" {
+		return e.clientReason
+	}
+	return "email or password do not match"
+}
+
+func (e authenticationError) StatusCode() int {
+	return http.StatusUnauthorized
 }

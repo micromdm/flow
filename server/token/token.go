@@ -3,6 +3,7 @@ package token
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -28,6 +29,7 @@ func NewSignedToken(privateKey *[64]byte, userID string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "marshal token for user %s", userID)
 	}
+	fmt.Println(string(b))
 
 	out := make([]byte, 0, len(b)+sign.Overhead)
 	out = sign.Sign(out, b, privateKey)
@@ -35,6 +37,7 @@ func NewSignedToken(privateKey *[64]byte, userID string) ([]byte, error) {
 	enc := base64.RawURLEncoding
 	buf := make([]byte, enc.EncodedLen(len(out)))
 	enc.Encode(buf, out)
+	fmt.Println(string(buf))
 	return buf, nil
 }
 

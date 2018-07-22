@@ -51,6 +51,18 @@ func EncodeJSONResponse(ctx context.Context, w http.ResponseWriter, response int
 
 func ErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	errMap := map[string]interface{}{"error": err.Error()}
+
+	// pattern match on custom errors
+	{
+		type authenticationError interface {
+			error
+			AuthenticationError() string
+		}
+		if e, ok := err.(authenticationError); ok {
+			errMap["error"] = e.AuthenticationError()
+		}
+	}
+
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 

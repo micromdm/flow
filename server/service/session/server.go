@@ -1,4 +1,4 @@
-package sessionsvc
+package session
 
 import (
 	"github.com/go-kit/kit/endpoint"
@@ -20,7 +20,7 @@ func MakeServerEndpoints(s Service, outer endpoint.Middleware, others ...endpoin
 
 func RegisterHTTPHandlers(r *mux.Router, e Endpoints, options ...httptransport.ServerOption) {
 	// POST   /v1/login
-	r.Methods("POST").Path("/v1/login").Handler(httptransport.NewServer(
+	r.Methods("POST").Path("/v1/users/login").Handler(httptransport.NewServer(
 		e.LoginEndpoint,
 		decodeLoginRequest,
 		httputil.EncodeJSONResponse,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,11 +11,18 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
 	"github.com/kolide/kit/actor"
 	"github.com/kolide/kit/logutil"
 	"github.com/oklog/run"
+	"golang.org/x/crypto/nacl/sign"
 
 	"github.com/micromdm/flow/server/bindata"
+	pgsession "github.com/micromdm/flow/server/data/session"
+	"github.com/micromdm/flow/server/data/user"
+	"github.com/micromdm/flow/server/service/session"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -56,6 +64,34 @@ func runServer(logger log.Logger) *actor.Actor {
 		assetHandler := bindata.ServeStaticAssets("/assets/")
 		r.PathPrefix("/assets/").Handler(assetHandler)
 		r.Handle("/", frontendHandler)
+		{
+			// add session svc
+			db, err := sqlx.Open("postgres", "host=localhost port=5432 user=flow dbname=flow password=work sslmode=disable")
+			if err != nil {
+				panic(err)
+			}
+			userDB := user.NewPostgres(db)
+			sessionDB := pgsession.NewPostgres(db)
+			pub, priv, err := sign.GenerateKey(rand.Reader)
+			if err != nil {
+				panic(err)
+			}
+
+			p := session.Params{
+				PublicKey:  pub,
+				PrivateKey: priv,
+				UserDB:     userDB,
+				SessiondDB: sessionDB,
+			}
+			var sessionsvc session.Service
+			{
+				sessionsvc = session.NewService(p)
+				sessionsvc = session.LoggingMiddleware(logger)(sessionsvc)
+			}
+			e := session.Endpoints{LoginEndpoint: session.MakeLoginEndpoint(sessionsvc)}
+			session.RegisterHTTPHandlers(r, e)
+
+		}
 		handler = r
 	}
 

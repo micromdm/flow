@@ -20,13 +20,12 @@ login { email, password } =
     let
         user =
             Encode.object
-                [ ( "email", Encode.string email )
+                [ ( "username", Encode.string email )
                 , ( "password", Encode.string password )
                 ]
 
         body =
-            Encode.object [ ( "user", user ) ]
-                |> Http.jsonBody
+            Http.jsonBody user
     in
         Decode.field "user" User.decoder
             |> Http.post "/v1/users/login" body

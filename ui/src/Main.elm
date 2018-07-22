@@ -4,7 +4,10 @@ import Html exposing (..)
 import Navigation exposing (Location)
 import Json.Decode as Decode exposing (Value)
 import Route exposing (Route)
+import Ports
 import Page.Home as Home
+import Data.Session exposing (Session)
+import Data.User as User exposing (User, Username)
 
 
 type Page
@@ -18,7 +21,8 @@ type PageState
 
 
 type alias Model =
-    { pageState : PageState
+    { session : Session
+    , pageState : PageState
     }
 
 
@@ -31,7 +35,16 @@ init : Value -> Location -> ( Model, Cmd Msg )
 init val location =
     setRoute (Route.fromLocation location)
         { pageState = Loaded initialPage
+        , session = { user = decodeUserFromJson val }
         }
+
+
+decodeUserFromJson : Value -> Maybe User
+decodeUserFromJson json =
+    json
+        |> Decode.decodeValue Decode.string
+        |> Result.toMaybe
+        |> Maybe.andThen (Decode.decodeString User.decoder >> Result.toMaybe)
 
 
 
@@ -42,6 +55,7 @@ type Msg
     = NoOp
     | SetRoute (Maybe Route)
     | HomeMsg Home.Msg
+    | SetUser (Maybe User)
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -69,6 +83,9 @@ update msg model =
 updatePage : Page -> Msg -> Model -> ( Model, Cmd Msg )
 updatePage page msg model =
     let
+        session =
+            model.session
+
         toPage toModel toMsg subUpdate subMsg subModel =
             let
                 ( newModel, newCmd ) =
@@ -84,7 +101,32 @@ updatePage page msg model =
                 setRoute route model
 
             ( HomeMsg subMsg, Home subModel ) ->
-                toPage Home HomeMsg Home.update subMsg subModel
+                let
+                    ( ( pageModel, cmd ), msgFromPage ) =
+                        Home.update subMsg subModel
+
+                    newModel =
+                        case msgFromPage of
+                            Home.NoOp ->
+                                model
+
+                            Home.SetUser user ->
+                                { model | session = { user = Just user } }
+                in
+                    ( { newModel | pageState = Loaded (Home pageModel) }
+                    , Cmd.map HomeMsg cmd
+                    )
+
+            ( SetUser user, _ ) ->
+                let
+                    cmd =
+                        -- If we just signed out, then redirect to Home.
+                        if session.user /= Nothing && user == Nothing then
+                            Route.modifyUrl Route.Home
+                        else
+                            Cmd.none
+                in
+                    { model | session = { session | user = user } } ! []
 
             ( _, NotFound ) ->
                 -- Disregard incoming messages when we're on the
@@ -112,7 +154,10 @@ view : Model -> Html Msg
 view model =
     case model.pageState of
         Loaded page ->
-            viewPage page
+            div []
+                [ text <| toString model
+                , viewPage page
+                ]
 
 
 viewPage : Page -> Html Msg
@@ -134,7 +179,12 @@ viewPage page =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.batch [ Sub.map SetUser sessionChange ]
+
+
+sessionChange : Sub (Maybe User)
+sessionChange =
+    Ports.onSessionChange (Decode.decodeValue User.decoder >> Result.toMaybe)
 
 
 

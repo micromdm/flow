@@ -29,8 +29,8 @@ type User struct {
 	Email     string
 	Password  []byte
 	Salt      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func (u *User) ValidatePassword(password string) error {

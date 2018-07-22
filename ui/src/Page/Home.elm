@@ -45,23 +45,46 @@ type Msg
     | LoginCompleted (Result Http.Error User)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+type ExternalMsg
+    = NoOp
+    | SetUser User
+
+
+update : Msg -> Model -> ( ( Model, Cmd Msg ), ExternalMsg )
 update msg model =
     case msg of
         SetPassword password ->
-            { model | password = password } ! []
+            ( ( { model | password = password }
+              , Cmd.none
+              )
+            , NoOp
+            )
 
         SetEmail email ->
-            { model | email = email } ! []
+            ( ( { model | email = email }
+              , Cmd.none
+              )
+            , NoOp
+            )
 
         SubmitForm ->
-            model ! [ Http.send LoginCompleted <| Request.User.login model ]
+            ( ( { model | errors = [] }
+              , Http.send LoginCompleted <| Request.User.login model
+              )
+            , NoOp
+            )
 
         LoginCompleted (Err error) ->
-            { model | errors = [ ( Form, httpErrorToString error ) ] } ! []
+            ( ( { model | errors = [ ( Form, httpErrorToString error ) ] }
+              , Cmd.none
+              )
+            , NoOp
+            )
 
         LoginCompleted (Ok user) ->
-            model ! [ storeSession user, Route.modifyUrl Route.Home ]
+            ( ( model, Cmd.batch [ storeSession user, Route.modifyUrl Route.Home ] )
+            , SetUser user
+            )
 
 
 view : Model -> Html Msg
