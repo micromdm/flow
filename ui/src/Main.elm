@@ -6,13 +6,16 @@ import Json.Decode as Decode exposing (Value)
 import Route exposing (Route)
 import Ports
 import Page.Home as Home
+import Page.Login as Login
 import Data.Session exposing (Session)
-import Data.User as User exposing (User, Username)
+import Data.User as User exposing (User, ID)
+import Views.Page as Page exposing (ActivePage)
 
 
 type Page
     = Blank
     | NotFound
+    | Login Login.Model
     | Home Home.Model
 
 
@@ -55,6 +58,7 @@ type Msg
     = NoOp
     | SetRoute (Maybe Route)
     | HomeMsg Home.Msg
+    | LoginMsg Login.Msg
     | SetUser (Maybe User)
 
 
@@ -63,16 +67,48 @@ setRoute maybeRoute model =
     let
         transition page =
             { model | pageState = Loaded page }
+
+        cmdFromAuth maybeRoute =
+            let
+                routeCmd =
+                    case maybeRoute of
+                        Nothing ->
+                            Cmd.none
+
+                        Just route ->
+                            Route.modifyUrl route
+            in
+                case model.session.user of
+                    Nothing ->
+                        Route.modifyUrl Route.Login
+
+                    Just _ ->
+                        routeCmd
     in
         case maybeRoute of
             Nothing ->
                 { model | pageState = Loaded NotFound } ! []
 
+            Just Route.Login ->
+                { model | pageState = Loaded (Login Login.initialModel) } ! []
+
+            Just Route.Logout ->
+                let
+                    session =
+                        model.session
+                in
+                    ( { model | session = { session | user = Nothing } }
+                    , Cmd.batch
+                        [ Ports.storeSession Nothing
+                        , Route.modifyUrl Route.Login
+                        ]
+                    )
+
             Just Route.Home ->
-                transition (Home Home.initialModel) ! []
+                transition (Home (Home.init model.session)) ! [ cmdFromAuth Nothing ]
 
             Just Route.Root ->
-                model ! [ Route.modifyUrl Route.Home ]
+                model ! [ cmdFromAuth <| Just Route.Home ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -100,33 +136,36 @@ updatePage page msg model =
             ( SetRoute route, _ ) ->
                 setRoute route model
 
-            ( HomeMsg subMsg, Home subModel ) ->
+            ( LoginMsg subMsg, Login subModel ) ->
                 let
                     ( ( pageModel, cmd ), msgFromPage ) =
-                        Home.update subMsg subModel
+                        Login.update subMsg subModel
 
                     newModel =
                         case msgFromPage of
-                            Home.NoOp ->
+                            Login.NoOp ->
                                 model
 
-                            Home.SetUser user ->
+                            Login.SetUser user ->
                                 { model | session = { user = Just user } }
                 in
-                    ( { newModel | pageState = Loaded (Home pageModel) }
-                    , Cmd.map HomeMsg cmd
+                    ( { newModel | pageState = Loaded (Login pageModel) }
+                    , Cmd.map LoginMsg cmd
                     )
+
+            ( HomeMsg subMsg, Home subModel ) ->
+                toPage Home HomeMsg (Home.update session) subMsg subModel
 
             ( SetUser user, _ ) ->
                 let
                     cmd =
-                        -- If we just signed out, then redirect to Home.
+                        -- If we just signed out, then redirect to Login.
                         if session.user /= Nothing && user == Nothing then
-                            Route.modifyUrl Route.Home
+                            Route.modifyUrl Route.Login
                         else
                             Cmd.none
                 in
-                    { model | session = { session | user = user } } ! []
+                    { model | session = { session | user = user } } ! [ cmd ]
 
             ( _, NotFound ) ->
                 -- Disregard incoming messages when we're on the
@@ -155,22 +194,37 @@ view model =
     case model.pageState of
         Loaded page ->
             div []
-                [ text <| toString model
-                , viewPage page
+                [ viewPage model.session page
+                , br [] []
+                , br [] []
+                , text <| toString model
                 ]
 
 
-viewPage : Page -> Html Msg
-viewPage page =
-    case page of
-        NotFound ->
-            text "404"
+viewPage : Session -> Page -> Html Msg
+viewPage session page =
+    let
+        frame =
+            Page.frame session.user
+    in
+        case page of
+            NotFound ->
+                text "404"
+                    |> frame Page.Other
 
-        Blank ->
-            text ""
+            Blank ->
+                text ""
+                    |> frame Page.Other
 
-        Home subModel ->
-            Home.view subModel |> Html.map HomeMsg
+            Login subModel ->
+                Login.view session subModel
+                    |> frame Page.Login
+                    |> Html.map LoginMsg
+
+            Home subModel ->
+                Home.view session subModel
+                    |> frame Page.Home
+                    |> Html.map HomeMsg
 
 
 

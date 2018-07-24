@@ -1,4 +1,4 @@
-module Data.User exposing (User, Username, decoder, encode, usernameDecoder, usernameParser, usernameToHtml, usernameToString)
+module Data.User exposing (User, ID, decoder, encode, idDecoder, idParser, idToHtml, idToString)
 
 import Html exposing (Html)
 import Json.Encode as Encode exposing (Value)
@@ -9,8 +9,8 @@ import Data.AuthToken as AuthToken exposing (AuthToken)
 
 
 type alias User =
-    { id : String
-    , username : Username
+    { id : ID
+    , username : String
     , fullName : String
     , email : String
     , createdAt : Int
@@ -26,8 +26,8 @@ type alias User =
 decoder : Decoder User
 decoder =
     decode User
-        |> required "id" Decode.string
-        |> required "username" usernameDecoder
+        |> required "id" idDecoder
+        |> required "username" Decode.string
         |> required "full_name" Decode.string
         |> required "email" Decode.string
         |> required "created_at" Decode.int
@@ -38,8 +38,8 @@ decoder =
 encode : User -> Value
 encode user =
     Encode.object
-        [ ( "id", Encode.string user.id )
-        , ( "username", encodeUsername user.username )
+        [ ( "id", encodeID user.id )
+        , ( "username", Encode.string user.username )
         , ( "full_name", Encode.string user.fullName )
         , ( "email", Encode.string user.email )
         , ( "created_at", Encode.int user.createdAt )
@@ -52,30 +52,30 @@ encode user =
 -- IDENTIFIERS --
 
 
-type Username
-    = Username String
+type ID
+    = ID String
 
 
-usernameToString : Username -> String
-usernameToString (Username username) =
-    username
+idToString : ID -> String
+idToString (ID id) =
+    id
 
 
-usernameParser : UrlParser.Parser (Username -> a) a
-usernameParser =
-    UrlParser.custom "USERNAME" (Ok << Username)
+idParser : UrlParser.Parser (ID -> a) a
+idParser =
+    UrlParser.custom "ID" (Ok << ID)
 
 
-usernameDecoder : Decoder Username
-usernameDecoder =
-    Decode.map Username Decode.string
+idDecoder : Decoder ID
+idDecoder =
+    Decode.map ID Decode.string
 
 
-encodeUsername : Username -> Value
-encodeUsername (Username username) =
-    Encode.string username
+encodeID : ID -> Value
+encodeID (ID id) =
+    Encode.string id
 
 
-usernameToHtml : Username -> Html msg
-usernameToHtml (Username username) =
-    Html.text username
+idToHtml : ID -> Html msg
+idToHtml (ID id) =
+    Html.text id

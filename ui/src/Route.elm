@@ -8,6 +8,8 @@ import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
 
 type Route
     = Root
+    | Login
+    | Logout
     | Home
 
 
@@ -16,11 +18,17 @@ routeToString page =
     let
         pieces =
             case page of
-                Home ->
-                    []
-
                 Root ->
                     []
+
+                Login ->
+                    [ "login" ]
+
+                Logout ->
+                    [ "logout" ]
+
+                Home ->
+                    [ "home" ]
     in
         "#/" ++ String.join "/" pieces
 
@@ -28,7 +36,10 @@ routeToString page =
 route : Parser (Route -> a) a
 route =
     oneOf
-        [ Url.map Home (s "")
+        [ Url.map Login (s "login")
+        , Url.map Logout (s "logout")
+        , Url.map Home (s "home")
+        , Url.map Home (s "")
         ]
 
 
